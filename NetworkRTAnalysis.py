@@ -4,7 +4,7 @@ import requests
 import json
 from colorama import Fore, Style , init
 from logging import getLogger
-from dotenv import load_dotenv
+
 
 import numpy as np
 from scapy.all import Ether, CookedLinux, sniff, IP, TCP
@@ -13,7 +13,7 @@ import ailia
 import smtplib
 from email.mime.text import MIMEText
 
-load_dotenv() 
+
 
 util_path = "util"
 sys.path.append(util_path)
