@@ -118,11 +118,6 @@ Evaluates model predictions and sends LINE notifications for detected threats.
 ### `send_line_notify(message)`
 Sends notifications to the configured LINE account.
 
-## Extending the System
-
-- **Adding New Threat Categories**: Update the `LABELS` list and retrain the model if necessary.
-- **Integrating New Models**: Replace the current model with an updated one in the `config.ini` file and adapt the preprocessing pipeline as needed.
-
 ## Contributions
 Contributions are welcome! Feel free to fork the repository and submit a pull request with your improvements.
 
