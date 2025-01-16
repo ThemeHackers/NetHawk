@@ -123,15 +123,6 @@ Sends notifications to the configured LINE account.
 - **Adding New Threat Categories**: Update the `LABELS` list and retrain the model if necessary.
 - **Integrating New Models**: Replace the current model with an updated one in the `config.ini` file and adapt the preprocessing pipeline as needed.
 
-## Limitations
-
-- Supports only TCP/IP packets.
-- Requires proper configuration of NIC and filtering rules for real-time detection.
-- Limited to threats predefined in the `LABELS` list.
-
-## License
-This project is released under the MIT License.
-
 ## Contributions
 Contributions are welcome! Feel free to fork the repository and submit a pull request with your improvements.
 
