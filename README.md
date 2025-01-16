@@ -1,4 +1,4 @@
-# Network Threat Detection using AI
+# Real-Time Network Threat Detection Using AI
 
 ## Overview
 This project implements a network threat detection system that leverages AI-based models to analyze network packets in real time or from hexadecimal data. It identifies and classifies various types of cyber threats such as DDoS, port scans, brute force attacks, and more, providing alerts and notifications for detected threats.
