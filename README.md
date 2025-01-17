@@ -61,6 +61,9 @@ The system classifies threats into the following categories:
 24. **Worms**
 ## Install requirements.txt
   ```bash
+  sudo su
+  python3 -m venv .venv
+  source .venv/bin/activate
   pip3 install -r requirements.txt
   ```
 ## Usage
@@ -82,12 +85,12 @@ The system classifies threats into the following categories:
 
 #### Real-Time Detection
 ```bash
-python nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx
+sudo python nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx
 ```
 
 #### HEX Packet Analysis
 ```bash
-python nethawk.py --hex <packet_hex_data> --onnx
+sudo python nethawk.py --hex <packet_hex_data> --onnx
 ```
 ## Run services on Linux
 - Access the /etc/systemd/system directory file
