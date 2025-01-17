@@ -1,7 +1,6 @@
 import sys
 import os
 import requests
-import json
 from colorama import Fore, Style, init
 from logging import getLogger
 import numpy as np
@@ -10,6 +9,8 @@ from transformers import AutoTokenizer
 import ailia
 import configparser
 import time
+import traceback
+
 
 util_path = "util"
 sys.path.append(util_path)
@@ -131,59 +132,112 @@ def recognize_from_packet(models):
             )
         else:
             output = predict(models, packet_hex)
-
-    top_k = 21
+            
+    top_k = 24
     labels, socres = output
+
     for label, score in list(zip(labels, socres))[:top_k]:
+        
         print(f"{label} : {score*100:.3f}")
 
     logger.info("Script finished successfully...")
-def send_line_notify(message):
 
+
+def send_line_notify(message):
     url = "https://notify-api.line.me/api/notify"
     headers = {"Authorization": f"Bearer {LINE_NOTIFY_TOKEN}"}
     payload = {"message": message}
 
-    try:
-        response = requests.post(url, headers=headers, data=payload)
-        if response.status_code == 200:
-            print(Fore.GREEN + "LINE notification sent successfully.")
-        else:
-            print(Fore.RED + f"Failed to send LINE notification: {response.status_code} {response.text}")
-    except Exception as e:
-        print(Fore.RED + f"An error occurred while sending LINE notification: {e}")
+    retries = 5  
+    for attempt in range(retries):
+        try:
+            response = requests.post(url, headers=headers, data=payload)
+            if response.status_code == 200:
+                print(Fore.GREEN + "Notification sent successfully!")
+                break  
+            else:
+                print(Fore.RED + f"Failed to send LINE notification: {response.status_code} {response.text}")
+        except Exception as e:
+            print(Fore.RED + f"An error occurred while sending LINE notification: {e}")
+        
+      
+        if attempt < retries - 1:
+            print(f"Retrying in 5 seconds... ({attempt + 1}/{retries})")
+            time.sleep(5)
+
+
+import numpy as np
+from colorama import Fore
+
+def send_alert(alert_message):
+    send_line_notify(alert_message)
 
 def analyze_and_notify(labels, scores, src_ip, dst_ip):
-    if isinstance(scores, np.ndarray) and scores.size > 1:
-        if not np.all(np.isfinite(scores)):
-            print(Fore.RED + "Warning: Scores contain invalid values.")
-            return
+    if not isinstance(scores, np.ndarray) or scores.size <= 1:
+        return
+    
+    if not np.all(np.isfinite(scores)):
+        print(Fore.RED + "Warning: Scores contain invalid values.")
+        return
+    
+    thresholds = {
+        "Analysis": 0.70, "Backdoor": 0.90, "Bot": 0.85, "DDoS": 0.90, "DoS": 0.85,
+        "DoS GoldenEye": 0.80, "DoS Hulk": 0.80, "DoS SlowHTTPTest": 0.80, "DoS Slowloris": 0.80,
+        "Exploits": 0.85, "FTP Patator": 0.75, "Fuzzers": 0.80, "Generic": 0.70, "Heartbleed": 0.90,
+        "Infiltration": 0.95, "Normal": 0.60, "Port Scan": 0.75, "Reconnaissance": 0.70,
+        "SSH Patator": 0.80, "Shellcode": 0.85, "Web Attack - Brute Force": 0.85, 
+        "Web Attack - SQL Injection": 0.90, "Web Attack - XSS": 0.80, "Worms": 0.85,
+    }
 
-        normal_idx = labels.tolist().index("Normal")
-        normal_score = scores[normal_idx]
+    normal_idx = labels.tolist().index("Normal")
+    normal_score = scores[normal_idx]
+    
 
-        for label, score in zip(labels, scores):
-            if score > 0.80:
-                if label != "Normal":
-                    alert_message = (
-                        f"⚠️ Attack detected!\n"
-                        f"Type: {label}\n"
-                        f"Score: {score * 100:.3f}%\n"
-                        f"From IP: {src_ip}\n"
-                        f"To IP: {dst_ip}"
-                    )
-                    print(Fore.GREEN + alert_message)
-                    send_line_notify(alert_message)
-            elif label != "Normal" and score > scores[normal_idx]:
-                alert_message = (
-                    f"⚠️ Possible attack detected!\n"
-                    f"Type: {label}\n"
-                    f"Score: {score * 100:.3f}%\n"
-                    f"From IP: {src_ip}\n"
-                    f"To IP: {dst_ip}"
-                )
-                print(Fore.YELLOW + alert_message)
-                send_line_notify(alert_message)
+    if normal_score < thresholds["Normal"]:
+        alert_message = (
+            f"⚠️ Possible system under attack detected!\n"
+            f"Normal score dropped below threshold.\n"
+            f"Score: {normal_score * 100:.3f}%\n"
+            f"From IP: {src_ip}\n"
+            f"To IP: {dst_ip}"
+        )
+        send_alert(alert_message)
+
+    for label, score in zip(labels, scores):
+        threshold = thresholds.get(label, 0.80)  
+        
+        
+        if score >= threshold:
+            alert_message = (
+                f"⚠️ System under attack detected!\n"
+                f"Type: {label}\n"
+                f"Score: {score * 100:.3f}%\n"
+                f"From IP: {src_ip}\n"
+                f"To IP: {dst_ip}"
+            )
+            send_alert(alert_message)
+        
+       
+        elif 0.30 <= score < threshold:
+            alert_message = (
+                f"⚠️ Anomaly detected!\n"
+                f"Type: {label}\n"
+                f"Score: {score * 100:.3f}%\n"
+                f"From IP: {src_ip}\n"
+                f"To IP: {dst_ip}"
+            )
+            send_alert(alert_message)
+        
+        
+        if label == "Normal" and score < thresholds["Normal"]:
+            alert_message = (
+                f"⚠️ Normal traffic anomaly detected!\n"
+                f"Normal score dropped below threshold.\n"
+                f"Score: {score * 100:.3f}%\n"
+                f"From IP: {src_ip}\n"
+                f"To IP: {dst_ip}"
+            )
+            send_alert(alert_message)
 
 def preprocess(packet_hex, use_ip=True):
     packet_bytes = bytes.fromhex(packet_hex)
@@ -260,9 +314,33 @@ def predict(models, packet_hex):
 
     return labels, scores
 
+# ===========================
+# Display for terminal clear
+# ===========================
+
+def display_terminal_clear():
+    print(rf'''
+{Fore.CYAN}{Style.BRIGHT}  
+            _   _      _   _    _                _    
+           | \ | |    | | | |  | |              | |   
+           |  \| | ___| |_| |__| | __ ___      _| | __
+           | . ` |/ _ \ __|  __  |/ _` \ \ /\ / / |/ / 
+           | |\  |  __/ |_| |  | | (_| |\ V  V /|   <  
+           |_| \_|\___|\__|_|  |_|\__,_| \_/\_/ |_|\_\
+{Style.RESET_ALL}
+        {Fore.GREEN}Author: ThemeHackers
+        {Fore.GREEN}Github: https://github.com/ThemeHackers/NetHawk.git
+        {Fore.GREEN}NetHawk is your network security analysis tool with many features and alerts when network attacks occur with score report and attack path shown as IP.    
+{Style.RESET_ALL}
+''')
+
+# ======================
+# Real time detection
+# ======================
 
 def real_time_detection(models):
     def packet_callback(packet):
+        
         if IP in packet and TCP in packet:
             packet_bytes = bytes(packet)
             packet_hex = packet_bytes.hex()
@@ -270,41 +348,48 @@ def real_time_detection(models):
             if not packet_bytes:
                 logger.warning("Received an empty packet. Skipping...")
                 return
-            
-            logger.info(Fore.RED + f"Use NIC (Network interface card): %s", ifaces)
-            logger.info(Fore.RED + f"Use Berkeley Packet Filter (BPF): {filter}")
-            logger.info(Fore.RED + f"Captured packets are stored in memory (as a list) and returned when the sniffing session is complete: {store}")
-            logger.info(Fore.RED + f"Processing packet: {packet_hex[:200]}...")
+            logger.info(Fore.RED + f"Processing packet: {packet_hex[:125]}...")
 
             src_ip = packet["IP"].src
             dst_ip = packet["IP"].dst
 
             labels, scores = predict(models, packet_hex)
-
             if labels is None or scores is None or len(labels) != len(scores):
                 logger.error("Invalid model output.")
                 return [], []
 
             analyze_and_notify(labels, scores, src_ip, dst_ip)
-
-            top_k = 21
-            for label, score in list(zip(labels, scores))[:top_k]:
-                print(f"{label} : {score*100:.3f}") 
-            print("-" * 100)
     
+            os.system("clear")
+            display_terminal_clear()
+            top_k = 24
+
+            for label, score in list(zip(labels, scores))[:top_k]:
+                print(f"{label} : {score*100:.3f}%")
+    
+            print("-" * 150)        
+
     ifaces = args.iface
     filter = args.filter
     store = args.store
     logger.info("Starting real-time packet capture...")
-    try:
-        sniff(prn=packet_callback, filter=filter, store=store, iface=ifaces)
-    except Exception as e:
-        logger.error(f"Error occurred while sniffing packets: {e}")
 
+    while True:
+        try:
+            sniff(prn=packet_callback, filter=filter, store=store, iface=ifaces)
+        except Exception as e:
+            logger.error(f"Error occurred while sniffing packets: {repr(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.info("Network error detected. Retrying in 10 seconds...")
+            time.sleep(10) 
+
+# ======================
+# Main function
+# ======================
 
 def main():
     check_and_download_models(WEIGHT_PATH, MODEL_PATH, REMOTE_PATH)
-
+    
     env_id = args.env_id
     rtd = args.rtd
 
