@@ -86,6 +86,91 @@ python nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx
 ```bash
 python nethawk.py --hex <packet_hex_data> --onnx
 ```
+## Run services on Linux
+- Access the /etc/systemd/system directory file
+  ```bash
+  cd /etc/systemd/system
+  ```
+- Access root privileges
+  ```bash
+  sudo su
+  ```
+- Create nethawk.service file and edit file
+  ```bash
+  mkdir nethawk.service
+  ```
+  ```bash
+  [Unit]
+  Description=NetHawk - Service is Artificial intelligence systems that detect network threats
+  After=network.target
+
+  [Service]
+  Type=simple
+  Environment="$OPTIONS=OPTIONS"
+  ExecStart=/home/kali/NetHawk/.venv/bin/python3 /home/kali/NetHawk/nethawk.py $OPTIONS
+  WorkingDirectory=/home/kali/NetHawk
+  User=root
+  Group=root
+  Restart=always
+  RestartSec=3
+
+  [Install]
+  WantedBy=multi-user.target
+  ```
+- reload the systemd daemon's configuration
+  ```bash
+  systemctl daemon-reload
+  ```
+- Set-Environment OPTIONS , Run service , checking service
+  ```bash
+  systemctl set-environment OPTIONS="--rtd --iface wlan0 --filter ip --env_id 1 --ip --onnx"
+  ```
+  
+  ```bash
+  systemctl start nethawk.service
+  ```
+  ```bash
+  systemctl status nethawk.service
+  ```
+- Your options can be viewed by running
+  ```bash
+  python3 nethawk.py -h
+  ```
+  ```bash
+  usage: nethawk.py [-h] [-i [IMAGE/VIDEO ...]] [-v VIDEO] [-s SAVE_PATH] [-b] [-e ENV_ID] [--env_list] [--ftype FILE_TYPE] [--debug] [--profile] [-bc BENCHMARK_COUNT] [--hex HEX] [--    iface IFACE]
+                    [--filter FILTER] [--store STORE] [--disable_ailia_tokenizer] [--rtd] [--ip] [--onnx]
+
+  bert-network-packet-flow-header-payload
+
+  options:
+    -h, --help            show this help message and exit
+    -i [IMAGE/VIDEO ...], --input [IMAGE/VIDEO ...]
+                          The default (model-dependent) input data (image / video) path. If a directory name is specified, the model will be run for the files inside. File type is specified by --ftype
+                          argument (default: input_hex.txt)
+    -v VIDEO, --video VIDEO
+                          You can convert the input video by entering style image.If the int variable is given, corresponding webcam input will be used. (default: None)
+    -s SAVE_PATH, --savepath SAVE_PATH
+                          Save path for the output (image / video / text). (default: None)
+    -b, --benchmark       Running the inference on the same input 5 times to measure execution performance. (Cannot be used in video mode) (default: False)
+    -e ENV_ID, --env_id ENV_ID
+                          A specific environment id can be specified. By default, the return value of ailia.get_gpu_environment_id will be used (default: -1)
+    --env_list            display environment list (default: False)
+    --ftype FILE_TYPE     file type list: image | video | audio (default: image)
+    --debug               set default logger level to DEBUG (enable to show DEBUG logs) (default: False)
+    --profile             set profile mode (enable to show PROFILE logs) (default: False)
+    -bc BENCHMARK_COUNT, --benchmark_count BENCHMARK_COUNT
+                          set iteration count of benchmark (default: 5)
+    --hex HEX             Input-HEX data. (default: None)
+    --iface IFACE         Network Interface eg; wlan0 eth0 enp0s3 (default: None)
+    --filter FILTER       Adjust the scope of packet capture (default: None)
+    --store STORE         Captured packets are stored in memory (as a list) and returned when the sniffing session is complete. (default: 0)
+    --disable_ailia_tokenizer
+                          disable ailia tokenizer. (default: False)
+    --rtd                 Real-time packet detection and network threat analysis using AI (default: False)
+    --ip                  Use IP layer as payload. (default: False)
+    --onnx                execute onnxruntime version. (default: False)
+
+    ```
 
 ## Contributions
 Contributions are welcome! Feel free to fork the repository and submit a pull request with your improvements.
