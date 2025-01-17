@@ -1,29 +1,37 @@
-# Real-Time Network Threat Detection Using AI
+# NetHawk - Network Security Analysis Tool
 
-## Overview
-This project implements a network threat detection system that leverages AI-based models to analyze network packets in real time or from hexadecimal data. It identifies and classifies various types of cyber threats such as DDoS, port scans, brute force attacks, and more, providing alerts and notifications for detected threats.
+## Description
+
+NetHawk is a powerful network security analysis tool designed to detect and analyze various network threats, including DoS attacks, DDoS attacks, port scans, SQL injections, backdoor attempts, and more. The tool leverages machine learning models to analyze network traffic in real-time, identify anomalies, and send alerts if suspicious behavior is detected. It supports a variety of attacks and can be configured to suit different network environments. The tool uses packet capture techniques and can process both pre-captured packet data and real-time network traffic.
 
 ## Features
 
-- **Real-time Packet Detection**: Captures and analyzes network traffic in real time.
-- **Threat Classification**: Identifies 24 types of cyber threats.
-- **AI Integration**: Uses a tokenizer and pre-trained model for inference.
-- **Alert Notifications**: Sends LINE notifications when threats are detected.
-- **Extensibility**: Modular design allows for the integration of additional models or threat categories.
+- **Real-Time Packet Detection**: Captures and processes network packets in real-time, analyzing traffic for potential threats and generating alerts.
+- **AI-based Threat Detection**: Utilizes pre-trained machine learning models to classify and score various types of network threats.
+- **Packet Analysis**: The tool decodes packet data and uses the IP and TCP layers to identify attack types.
+- **Customizable Alerting**: Configurable thresholds to send notifications via LINE or email if certain attack thresholds are exceeded.
+- **Configurable Network Interface**: Users can specify the network interface (e.g., `wlan0`, `eth0`) for packet sniffing.
+- **Support for Pre-Captured Packet Data**: Allows processing of network packet data provided as hex dumps.
+- **Model Inference via ONNX Runtime**: Supports ONNX-based model inference for flexible deployment.
 
-## Prerequisites
+## config.ini
 
-- Python 3.8+
-- Required Python Libraries:
-  - `sys`, `os`, `requests`, `json`, `configparser`, `time`
-  - `numpy`
-  - `scapy`
-  - `transformers`
-  - `ailia`
-  - `colorama`
-- Network Interface Card (NIC) for real-time detection
-- Configuration file (`config.ini`) with appropriate settings.
+The `config.ini` file is used to store necessary configuration settings. Below is the format for the configuration file:
 
+```ini
+[Notifications]
+LINE_NOTIFY_TOKEN = your_line_notify_token_here
+
+[Email]
+EMAIL_SENDER = sender_email_here
+EMAIL_PASSWORD = sender_email_password_here
+EMAIL_RECEIVER = receiver_email_here
+
+[Model]
+WEIGHT_PATH = model.onnx
+MODEL_PATH = model.onnx.prototxt
+REMOTE_PATH = https://storage.googleapis.com/ailia-models/bert-network-packet-flow-header-payload/
+```
 ## Labels
 The system classifies threats into the following categories:
 
@@ -52,25 +60,6 @@ The system classifies threats into the following categories:
 23. **Web Attack - XSS**
 24. **Worms**
 
-## Configuration
-
-The `config.ini` file should include the following sections:
-
-```ini
-[Notifications]
-LINE_NOTIFY_TOKEN = <Your LINE Notify Token>
-
-[Email]
-EMAIL_SENDER = <Your Email Address>
-EMAIL_PASSWORD = <Your Email Password>
-EMAIL_RECEIVER = <Recipient Email Address>
-
-[Model]
-WEIGHT_PATH = <Path to Model Weights>
-MODEL_PATH = <Path to Model Definition>
-REMOTE_PATH = <Remote Path to Download Models>
-```
-
 ## Usage
 
 ### Command-Line Arguments
@@ -97,26 +86,6 @@ python nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx
 ```bash
 python nethawk.py --hex <packet_hex_data> --onnx
 ```
-
-## Key Functions
-
-### `recognize_from_packet(models)`
-Analyzes network packets from hexadecimal data and performs threat classification.
-
-### `real_time_detection(models)`
-Captures packets from the specified network interface in real time, analyzes them, and provides threat alerts.
-
-### `preprocess(packet_hex, use_ip=True)`
-Processes raw packet data into a format suitable for AI model inference.
-
-### `predict(models, packet_hex)`
-Performs inference using the tokenizer and model to classify threats.
-
-### `analyze_and_notify(labels, scores, src_ip, dst_ip)`
-Evaluates model predictions and sends LINE notifications for detected threats.
-
-### `send_line_notify(message)`
-Sends notifications to the configured LINE account.
 
 ## Contributions
 Contributions are welcome! Feel free to fork the repository and submit a pull request with your improvements.
