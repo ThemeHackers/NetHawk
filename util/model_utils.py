@@ -89,7 +89,7 @@ def check_and_download_models(weight_path, model_path, remote_path):
             progress_print,
         )
         logger.info('\n')
-    logger.info(Fore.WHITE + 'ONNX file and Prototxt file are prepared!\n')
+    logger.info(Fore.WHITE + 'ONNX file and Prototxt file are prepared!')
 
 
 def check_and_download_file(file_path, remote_path):
