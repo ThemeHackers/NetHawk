@@ -1,0 +1,12 @@
+onnxruntime
+ailia
+transformers
+scapy
+numpy
+colorama
+requests
+tensorflow
+torch
+torchvision
+
+
