@@ -59,7 +59,10 @@ The system classifies threats into the following categories:
 22. **Web Attack - SQL Injection**
 23. **Web Attack - XSS**
 24. **Worms**
-
+## Install requirements.txt
+  ```bash
+  pip3 install -r requirements.txt
+  ```
 ## Usage
 
 ### Command-Line Arguments
