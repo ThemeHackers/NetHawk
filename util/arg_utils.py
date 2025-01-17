@@ -30,7 +30,7 @@ def logo():
 def processing(total_steps=100):
 
     for step in tqdm.tqdm(range(total_steps), desc=Fore.CYAN + "Processing ...", unit="step"):
-        time.sleep(0.001)  
+        time.sleep(0.0095237429347239)  
 logo()
 processing()
 # FIXME: Next two lines should be better to call from the main script
