@@ -10,7 +10,7 @@ import ailia
 import configparser
 import time
 import traceback
-
+import onnxruntime
 
 util_path = "util"
 sys.path.append(util_path)
@@ -166,9 +166,6 @@ def send_line_notify(message):
             time.sleep(5)
 
 
-import numpy as np
-from colorama import Fore
-
 def send_alert(alert_message):
     send_line_notify(alert_message)
 
@@ -192,7 +189,7 @@ def analyze_and_notify(labels, scores, src_ip, dst_ip):
     normal_idx = labels.tolist().index("Normal")
     normal_score = scores[normal_idx]
     
-
+   
     if normal_score < thresholds["Normal"]:
         alert_message = (
             f"⚠️ Possible system under attack detected!\n"
@@ -203,9 +200,14 @@ def analyze_and_notify(labels, scores, src_ip, dst_ip):
         )
         send_alert(alert_message)
 
+    
     for label, score in zip(labels, scores):
-        threshold = thresholds.get(label, 0.80)  
+        threshold = thresholds.get(label, 0.80)
         
+        
+        if label == "Normal":
+            continue
+
         
         if score >= threshold:
             alert_message = (
@@ -217,7 +219,7 @@ def analyze_and_notify(labels, scores, src_ip, dst_ip):
             )
             send_alert(alert_message)
         
-       
+        
         elif 0.30 <= score < threshold:
             alert_message = (
                 f"⚠️ Anomaly detected!\n"
@@ -227,17 +229,8 @@ def analyze_and_notify(labels, scores, src_ip, dst_ip):
                 f"To IP: {dst_ip}"
             )
             send_alert(alert_message)
-        
-        
-        if label == "Normal" and score < thresholds["Normal"]:
-            alert_message = (
-                f"⚠️ Normal traffic anomaly detected!\n"
-                f"Normal score dropped below threshold.\n"
-                f"Score: {score * 100:.3f}%\n"
-                f"From IP: {src_ip}\n"
-                f"To IP: {dst_ip}"
-            )
-            send_alert(alert_message)
+
+
 
 def preprocess(packet_hex, use_ip=True):
     packet_bytes = bytes.fromhex(packet_hex)
@@ -398,7 +391,7 @@ def main():
     elif rtd:
        
         if args.onnx:
-            import onnxruntime
+           
             net = onnxruntime.InferenceSession(WEIGHT_PATH)
 
         tokenizer = AutoTokenizer.from_pretrained("tokenizer")
@@ -412,7 +405,7 @@ def main():
         return
 
     else:
-        import onnxruntime
+     
         net = onnxruntime.InferenceSession(WEIGHT_PATH)
 
     tokenizer = AutoTokenizer.from_pretrained("tokenizer")
