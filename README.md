@@ -1,4 +1,4 @@
-# NetHawk - Network Security Analysis Tool
+# NetHawk - Network Security Analysis Tool - Linux 
 
 ## Description
 
