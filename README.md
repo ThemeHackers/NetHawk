@@ -177,7 +177,15 @@ sudo python nethawk.py --hex <packet_hex_data> --onnx
     --onnx                execute onnxruntime version. (default: False)
 
     ```
-
+## More
+- real-time log monitoring of systemd
+  ```bash
+  sudo journalctl -f
+  ```
+- Filter by importance level
+  ```bash
+  sudo journalctl -f -p err
+  ```
 ## Contributions
 Contributions are welcome! Feel free to fork the repository and submit a pull request with your improvements.
 
