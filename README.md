@@ -113,8 +113,8 @@ sudo python nethawk.py --hex <packet_hex_data> --onnx
   [Service]
   Type=simple
   Environment="$OPTIONS=OPTIONS"
-  ExecStart=/home/kali/NetHawk/.venv/bin/python3 /home/kali/NetHawk/nethawk.py $OPTIONS
-  WorkingDirectory=/home/kali/NetHawk
+  ExecStart=/home/user/NetHawk/.venv/bin/python3 /home/user/NetHawk/nethawk.py $OPTIONS
+  WorkingDirectory=/home/user/NetHawk
   User=root
   Group=root
   Restart=always
