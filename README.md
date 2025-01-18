@@ -1,4 +1,12 @@
-# NetHawk - Network Security Analysis Tool - Linux 
+# NetHawk - Network Security Analysis Tool 
+
+# What do you work on?
+
+- Ubuntu
+- Kali Linux
+- ParrotOS
+
+In the future, I will release a supported system on Windows.
 
 ## Description
 
