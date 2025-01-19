@@ -8,5 +8,5 @@ requests
 tensorflow
 torch
 torchvision
-
+tabulate
 
