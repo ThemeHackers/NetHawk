@@ -10,3 +10,7 @@ torch
 torchvision
 tabulate
 onnx
+matplotlib
+
+
+
