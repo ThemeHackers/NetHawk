@@ -9,4 +9,4 @@ tensorflow
 torch
 torchvision
 tabulate
-
+onnx
