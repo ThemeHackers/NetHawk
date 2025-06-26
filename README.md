@@ -93,12 +93,12 @@ The system classifies threats into the following categories:
 
 #### Real-Time Detection
 ```bash
-sudo python nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx
+sudo python3 nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx
 ```
 
 #### HEX Packet Analysis
 ```bash
-sudo python nethawk.py --hex <packet_hex_data> --onnx
+sudo python3 nethawk.py --hex <packet_hex_data> --onnx
 ```
 ## Run services on Linux
 - Access the /etc/systemd/system directory file
