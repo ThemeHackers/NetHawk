@@ -28,12 +28,13 @@ The `config.ini` file is used to store necessary configuration settings. Below i
 
 ```ini
 [Notifications]
-LINE_NOTIFY_TOKEN = your_line_notify_token_here
+LINE_CHANNEL_ACCESS_TOKEN = 
+LINE_USER_ID = 
 
 [Email]
-EMAIL_SENDER = sender_email_here
-EMAIL_PASSWORD = sender_email_password_here
-EMAIL_RECEIVER = receiver_email_here
+EMAIL_SENDER = 
+EMAIL_PASSWORD = 
+EMAIL_RECEIVER = 
 
 [Model]
 WEIGHT_PATH = model.onnx
