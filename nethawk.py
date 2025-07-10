@@ -28,13 +28,14 @@ logger = getLogger(__name__)
 # ======================
 config = configparser.ConfigParser()
 config.read('config.ini')
-LINE_NOTIFY_TOKEN = config['Notifications']['LINE_NOTIFY_TOKEN']
 EMAIL_SENDER = config['Email']['EMAIL_SENDER']
 EMAIL_PASSWORD = config['Email']['EMAIL_PASSWORD']
 EMAIL_RECEIVER = config['Email']['EMAIL_RECEIVER']
 WEIGHT_PATH = config['Model']['WEIGHT_PATH']
 MODEL_PATH = config['Model']['MODEL_PATH']
 REMOTE_PATH = config['Model']['REMOTE_PATH']
+LINE_CHANNEL_ACCESS_TOKEN = config['Notifications']['LINE_CHANNEL_ACCESS_TOKEN']
+LINE_USER_ID = config['Notifications']['LINE_USER_ID']
 
 # ============================================================================================================================================================================================================================================================================
 # labels meaning
@@ -143,31 +144,41 @@ def recognize_from_packet(models):
     logger.info("Script finished successfully...")
 
 
-def send_line_notify(message):
-    url = "https://notify-api.line.me/api/notify"
-    headers = {"Authorization": f"Bearer {LINE_NOTIFY_TOKEN}"}
-    payload = {"message": message}
+def send_line_message(message):
+    url = "https://api.line.me/v2/bot/message/push"
+    headers = {
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "to": LINE_USER_ID,
+        "messages": [
+            {
+                "type": "text",
+                "text": message
+            }
+        ]
+    }
 
-    retries = 5  
+    retries = 5
     for attempt in range(retries):
         try:
-            response = requests.post(url, headers=headers, data=payload)
+            response = requests.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 print(Fore.GREEN + "Notification sent successfully!")
-                break  
+                break
             else:
-                print(Fore.RED + f"Failed to send LINE notification: {response.status_code} {response.text}")
+                print(Fore.RED + f"Failed to send LINE message: {response.status_code} {response.text}")
         except Exception as e:
-            print(Fore.RED + f"An error occurred while sending LINE notification: {e}")
-        
-      
+            print(Fore.RED + f"An error occurred while sending LINE message: {e}")
+
         if attempt < retries - 1:
             print(f"Retrying in 5 seconds... ({attempt + 1}/{retries})")
             time.sleep(5)
 
 
 def send_alert(alert_message):
-    send_line_notify(alert_message)
+    send_line_message(alert_message)
 
 def analyze_and_notify(labels, scores, src_ip, dst_ip):
     if not isinstance(scores, np.ndarray) or scores.size <= 1:
