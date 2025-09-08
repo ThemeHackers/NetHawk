@@ -72,7 +72,7 @@ The system classifies threats into the following categories:
   ```
 ## Usage
 
-### Command-Line Arguments
+### Example Command-Line Arguments
 
 | Argument                     | Description                                           |
 |------------------------------|-------------------------------------------------------|
@@ -84,14 +84,18 @@ The system classifies threats into the following categories:
 | `--ip`                       | Use IP layer as payload (default: True).             |
 | `--onnx`                     | Use ONNX runtime for inference.                      |
 | `--disable_ailia_tokenizer`  | Disable Ailia tokenizer.                             |
-
+| `--verbose`                  | Show detailed analysis and system processing information.      |
 ### Examples
 
 #### Real-Time Detection
+- No Verbose
 ```bash
 sudo python3 nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx
 ```
-
+- Verbose
+```bash
+sudo python3 nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx --verbose
+```
 #### HEX Packet Analysis
 ```bash
 sudo python3 nethawk.py --hex <packet_hex_data> --onnx
@@ -147,28 +151,26 @@ sudo python3 nethawk.py --hex <packet_hex_data> --onnx
   python3 nethawk.py -h
   ```
   ```bash
-  usage: nethawk.py [-h] [-i [IMAGE/VIDEO ...]] [-v VIDEO] [-s SAVE_PATH] [-b] [-e ENV_ID] [--env_list] [--ftype FILE_TYPE] [--debug] [--profile] [-bc BENCHMARK_COUNT] [--hex HEX] [--    iface IFACE]
-                    [--filter FILTER] [--store STORE] [--disable_ailia_tokenizer] [--rtd] [--ip] [--onnx]
-
+  usage: nethawk.py [-h] [-i [IMAGE/VIDEO ...]] [-v VIDEO] [-s SAVE_PATH] [-b] [-e ENV_ID] [--env_list] [--ftype FILE_TYPE] [--debug] [--profile] [-bc BENCHMARK_COUNT] [--hex HEX] [--iface IFACE]
+                    [--filter FILTER] [--store STORE] [--disable_ailia_tokenizer] [--rtd] [--ip] [--onnx] [--verbose]
+  
   bert-network-packet-flow-header-payload
-
+  
   options:
     -h, --help            show this help message and exit
-    -i [IMAGE/VIDEO ...], --input [IMAGE/VIDEO ...]
+    -i, --input [IMAGE/VIDEO ...]
                           The default (model-dependent) input data (image / video) path. If a directory name is specified, the model will be run for the files inside. File type is specified by --ftype
                           argument (default: input_hex.txt)
-    -v VIDEO, --video VIDEO
-                          You can convert the input video by entering style image.If the int variable is given, corresponding webcam input will be used. (default: None)
-    -s SAVE_PATH, --savepath SAVE_PATH
+    -v, --video VIDEO     You can convert the input video by entering style image.If the int variable is given, corresponding webcam input will be used. (default: None)
+    -s, --savepath SAVE_PATH
                           Save path for the output (image / video / text). (default: None)
     -b, --benchmark       Running the inference on the same input 5 times to measure execution performance. (Cannot be used in video mode) (default: False)
-    -e ENV_ID, --env_id ENV_ID
-                          A specific environment id can be specified. By default, the return value of ailia.get_gpu_environment_id will be used (default: -1)
+    -e, --env_id ENV_ID   A specific environment id can be specified. By default, the return value of ailia.get_gpu_environment_id will be used (default: -1)
     --env_list            display environment list (default: False)
     --ftype FILE_TYPE     file type list: image | video | audio (default: image)
     --debug               set default logger level to DEBUG (enable to show DEBUG logs) (default: False)
     --profile             set profile mode (enable to show PROFILE logs) (default: False)
-    -bc BENCHMARK_COUNT, --benchmark_count BENCHMARK_COUNT
+    -bc, --benchmark_count BENCHMARK_COUNT
                           set iteration count of benchmark (default: 5)
     --hex HEX             Input-HEX data. (default: None)
     --iface IFACE         Network Interface eg; wlan0 eth0 enp0s3 (default: None)
@@ -179,8 +181,9 @@ sudo python3 nethawk.py --hex <packet_hex_data> --onnx
     --rtd                 Real-time packet detection and network threat analysis using AI (default: False)
     --ip                  Use IP layer as payload. (default: False)
     --onnx                execute onnxruntime version. (default: False)
-
-    ```
+    --verbose             Show detailed analysis and system processing information. (default: False)
+                                                                 
+  ```
 ## More
 - real-time log monitoring of systemd
   ```bash
