@@ -6,7 +6,6 @@
 - Kali Linux
 - ParrotOS
 
-In the future, I will release a supported system on Windows.
 
 ## Description
 
