@@ -27,13 +27,9 @@ The `config.ini` file is used to store necessary configuration settings. Below i
 
 ```ini
 [Notifications]
-LINE_CHANNEL_ACCESS_TOKEN = 
-LINE_USER_ID = 
-
-[Email]
-EMAIL_SENDER = 
-EMAIL_PASSWORD = 
-EMAIL_RECEIVER = 
+BOT_TOKEN = 
+CHANNEL_ID = 
+ALERT_COOLDOWN = 60
 
 [Model]
 WEIGHT_PATH = model.onnx
