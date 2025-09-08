@@ -1,6 +1,7 @@
 import sys
 import os
 import requests
+import json
 from colorama import Fore, Style, init
 from logging import getLogger
 import numpy as np
@@ -9,9 +10,7 @@ from transformers import AutoTokenizer
 import ailia
 import configparser
 import time
-import traceback
-import onnxruntime
-
+import threading
 util_path = "util"
 sys.path.append(util_path)
 
@@ -19,23 +18,24 @@ from arg_utils import get_base_parser, update_parser
 from model_utils import check_and_download_models
 from math_utils import softmax
 
-
 init(autoreset=True)
 logger = getLogger(__name__)
 
-# ======================
-# Read Configuration
-# ======================
 config = configparser.ConfigParser()
 config.read('config.ini')
-EMAIL_SENDER = config['Email']['EMAIL_SENDER']
-EMAIL_PASSWORD = config['Email']['EMAIL_PASSWORD']
-EMAIL_RECEIVER = config['Email']['EMAIL_RECEIVER']
+BOT_TOKEN = config['Notifications']['BOT_TOKEN']
+ALERT_COOLDOWN = float(config['Notifications']['ALERT_COOLDOWN'])
+CHANNEL_ID = config['Notifications']['CHANNEL_ID']
+
 WEIGHT_PATH = config['Model']['WEIGHT_PATH']
 MODEL_PATH = config['Model']['MODEL_PATH']
 REMOTE_PATH = config['Model']['REMOTE_PATH']
-LINE_CHANNEL_ACCESS_TOKEN = config['Notifications']['LINE_CHANNEL_ACCESS_TOKEN']
-LINE_USER_ID = config['Notifications']['LINE_USER_ID']
+
+last_sent_time = 0
+last_message_id = None
+batch_alerts = []
+BATCH_INTERVAL = 5 * 60
+
 
 # ============================================================================================================================================================================================================================================================================
 # labels meaning
@@ -65,6 +65,7 @@ LINE_USER_ID = config['Notifications']['LINE_USER_ID']
 # Web Attack - XSS (Cross-Site Scripting): A vulnerability in web applications where malicious scripts are injected into web pages viewed by users, allowing attackers to execute scripts in the user's browser and potentially steal data or perform malicious actions.
 # Worms: A type of malware that can replicate itself and spread across networks, often without user intervention, exploiting vulnerabilities in software or systems to infect other machines.
 
+
 LABELS = [
     "Analysis", "Backdoor", "Bot", "DDoS", "DoS", "DoS GoldenEye", "DoS Hulk", "DoS SlowHTTPTest", "DoS Slowloris", 
     "Exploits", "FTP Patator", "Fuzzers", "Generic", "Heartbleed", "Infiltration", "Normal", "Port Scan", "Reconnaissance", 
@@ -72,10 +73,6 @@ LABELS = [
 ]
 
 PACKEt_HEX_PATH = "input_hex.txt"
-
-# ======================
-# Argument Parser Config
-# ======================
 
 parser = get_base_parser(
     "bert-network-packet-flow-header-payload",
@@ -86,160 +83,199 @@ parser.add_argument("--hex", type=str, default=None, help="Input-HEX data.")
 parser.add_argument("--iface", type=str , help="Network Interface eg; wlan0 eth0 enp0s3")
 parser.add_argument("--filter", type=str , help="Adjust the scope of packet capture")
 parser.add_argument("--store", type=int , default=0 , help="Captured packets are stored in memory (as a list) and returned when the sniffing session is complete.")
-parser.add_argument(
-    '--disable_ailia_tokenizer',
-    action='store_true',
-    help='disable ailia tokenizer.'
-)
+parser.add_argument('--disable_ailia_tokenizer', action='store_true', help='disable ailia tokenizer.')
 parser.add_argument("--rtd" , action='store_true' , help="Real-time packet detection and network threat analysis using AI")
 parser.add_argument("--ip", action="store_true", help="Use IP layer as payload.")
 parser.add_argument("--onnx", action="store_true", help="execute onnxruntime version.")
+parser.add_argument("--verbose", action='store_true', help="Show detailed analysis and system processing information.")
 args = update_parser(parser)
 
-# ======================
-# Additional Functions
-# ======================
+VERBOSE = args.verbose
 
+def vprint(*messages):
+    if VERBOSE:
+        print(Fore.GREEN + "[VERBOSE]", *messages, Style.RESET_ALL)
+
+# ======================
+# Functions
+# ======================
 def recognize_from_packet(models):
     packet_hex = args.hex
     if packet_hex:
         args.input[0] = packet_hex
 
-   
     for packet_path in args.input:
-       
         if os.path.isfile(packet_path):
-            logger.info(packet_path)
+            vprint("Processing file:", packet_path)
             with open(packet_path, "r") as f:
                 packet_hex = f.read()
 
-       
-        logger.info("Start inference...\n")
+        vprint("Start inference for packet...\n")
         if args.benchmark:
-            logger.info("BENCHMARK mode")
+            vprint("BENCHMARK mode enabled")
             total_time_estimation = 0
             for i in range(args.benchmark_count):
                 start = int(round(time.time() * 1000))
                 output = predict(models, packet_hex)
                 end = int(round(time.time() * 1000))
                 estimation_time = end - start
-
-                logger.info(f"\tailia processing estimation time {estimation_time} ms")
+                vprint(f"\tInference time for iteration {i}: {estimation_time} ms")
                 if i != 0:
-                    total_time_estimation = total_time_estimation + estimation_time
-
-            logger.info(
-                f"\taverage time estimation {total_time_estimation / (args.benchmark_count - 1)} ms"
-            )
+                    total_time_estimation += estimation_time
+            vprint(f"\tAverage inference time: {total_time_estimation / (args.benchmark_count - 1)} ms")
         else:
             output = predict(models, packet_hex)
-            
-    top_k = 24
-    labels, socres = output
 
-    for label, score in list(zip(labels, socres))[:top_k]:
-        
+    top_k = 21
+    labels, scores = output
+    for label, score in list(zip(labels, scores))[:top_k]:
         print(f"{label} : {score*100:.3f}")
 
-    logger.info("Script finished successfully...")
+    vprint("Packet recognition finished successfully.")
 
-
-def send_line_message(message):
-    url = "https://api.line.me/v2/bot/message/push"
-    headers = {
-        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
-        "Content-Type": "application/json"
+def add_to_batch(label, score, src_ip, dst_ip, severity="high"):
+    global batch_alerts
+    alert_entry = {
+        "label": label,
+        "score": score,
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "severity": severity,
+        "time": time.strftime("%H:%M:%S"),
     }
-    payload = {
-        "to": LINE_USER_ID,
-        "messages": [
-            {
-                "type": "text",
-                "text": message
-            }
-        ]
-    }
+    batch_alerts.append(alert_entry)
 
-    retries = 5
-    for attempt in range(retries):
-        try:
-            response = requests.post(url, headers=headers, json=payload)
-            if response.status_code == 200:
-                print(Fore.GREEN + "Notification sent successfully!")
-                break
-            else:
-                print(Fore.RED + f"Failed to send LINE message: {response.status_code} {response.text}")
-        except Exception as e:
-            print(Fore.RED + f"An error occurred while sending LINE message: {e}")
+def send_batch_summary():
 
-        if attempt < retries - 1:
-            print(f"Retrying in 5 seconds... ({attempt + 1}/{retries})")
-            time.sleep(5)
+    global batch_alerts
+    if not batch_alerts:
+        return
+    counts = {}
+    for entry in batch_alerts:
+        key = entry["label"]
+        counts[key] = counts.get(key, 0) + 1
+
+    summary_lines = []
+    for label, count in counts.items():
+        summary_lines.append(f"🔹 {label}: {count} Time")
+
+    description = (
+        f"📡 **Batch Alert Summary ({len(batch_alerts)} events)**\n"
+        + "\n".join(summary_lines)
+    )
+
+    send_discord_embed(
+        title="📊 Batch Network Threat Summary",
+        description=description,
+        color=3447003, 
+        BOT_TOKEN=BOT_TOKEN,
+        CHANNEL_ID=CHANNEL_ID,
+    )
+
+    batch_alerts = []
+
+def batch_scheduler():
+    while True:
+        time.sleep(BATCH_INTERVAL)
+        send_batch_summary()
+
+def alert(label, score, src_ip, dst_ip, severity="high"):
+
+    if severity == "high":
+        title = "🚨🔥 **Attack Detected!** 🔥🚨"
+        color = 16711680  
+    else:
+        title = "⚠️🛡️ **Possible Attack Detected!** 🛡️⚠️"
+        color = 16776960  
 
 
-def send_alert(alert_message):
-    send_line_message(alert_message)
+    description = (
+        f"🧩 **Type:** {label}\n"
+        f"📊 **Score:** {score*100:.2f}%\n"
+        f"🌐 **From IP:** `{src_ip}`\n"
+        f"🎯 **To IP:** `{dst_ip}`"
+    )
+
+    send_discord_embed(title, description, color=color, BOT_TOKEN=BOT_TOKEN, CHANNEL_ID=CHANNEL_ID)
+    console_color = Fore.RED if severity == "high" else Fore.YELLOW
+    print(console_color + title)
+    print(console_color + f"🧩 Type: {label}")
+    print(console_color + f"📊 Score: {score*100:.2f}%")
+    print(console_color + f"🌐 From IP: {src_ip}")
+    print(console_color + f"🎯 To IP: {dst_ip}")
+    print(Style.RESET_ALL + "-"*60)
+
+
+def send_discord_embed(title, description, color=16711680, BOT_TOKEN="", CHANNEL_ID=""):
+    global last_sent_time, last_message_id
+    current_time = time.time()
+    if current_time - last_sent_time < ALERT_COOLDOWN:
+        vprint(f"Cooldown active ({ALERT_COOLDOWN}s). Waiting before sending another message.")
+        return
+
+    url = f"https://discord.com/api/v10/channels/{CHANNEL_ID}/messages"
+    headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
+    payload = {"embeds":[{"title": title, "description": description, "color": color}]}
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code in [200, 201]:
+            data = response.json()
+            last_message_id = data["id"]
+            last_sent_time = current_time
+            vprint("Discord embed notification sent successfully.")
+            threading.Thread(target=delete_last_message_after_cooldown, args=(BOT_TOKEN, CHANNEL_ID)).start()
+            
+        else:
+            print(Fore.RED + f"Failed to send Discord embed: {response.status_code} {response.text}")
+    except Exception as e:
+        print(Fore.RED + f"Error sending Discord embed: {e}")
+
+def delete_last_message_after_cooldown(BOT_TOKEN="", CHANNEL_ID=""):
+    global last_message_id
+    time.sleep(ALERT_COOLDOWN)
+    if last_message_id is None:
+        return
+    url = f"https://discord.com/api/v10/channels/{CHANNEL_ID}/messages/{last_message_id}"
+    headers = {"Authorization": f"Bot {BOT_TOKEN}"}
+    try:
+        response = requests.delete(url, headers=headers)
+        if response.status_code == 204:
+            vprint("Discord message deleted successfully.")
+            last_message_id = None
+        else:
+            print(Fore.RED + f"Failed to delete message: {response.status_code} {response.text}")
+    except Exception as e:
+        print(Fore.RED + f"Error deleting message: {e}")
 
 def analyze_and_notify(labels, scores, src_ip, dst_ip):
-    if not isinstance(scores, np.ndarray) or scores.size <= 1:
+    if not isinstance(scores, np.ndarray) or scores.size != len(labels):
+        if VERBOSE:
+            print(Fore.RED + "[VERBOSE] Invalid scores or labels.")
         return
-    
-    if not np.all(np.isfinite(scores)):
-        print(Fore.RED + "Warning: Scores contain invalid values.")
-        return
-    
-    thresholds = {
-        "Analysis": 0.70, "Backdoor": 0.90, "Bot": 0.85, "DDoS": 0.90, "DoS": 0.85,
-        "DoS GoldenEye": 0.80, "DoS Hulk": 0.80, "DoS SlowHTTPTest": 0.80, "DoS Slowloris": 0.80,
-        "Exploits": 0.85, "FTP Patator": 0.75, "Fuzzers": 0.80, "Generic": 0.70, "Heartbleed": 0.90,
-        "Infiltration": 0.95, "Normal": 0.60, "Port Scan": 0.75, "Reconnaissance": 0.70,
-        "SSH Patator": 0.80, "Shellcode": 0.85, "Web Attack - Brute Force": 0.85, 
-        "Web Attack - SQL Injection": 0.90, "Web Attack - XSS": 0.80, "Worms": 0.85,
-    }
 
-    normal_idx = labels.tolist().index("Normal")
-    normal_score = scores[normal_idx]
-    
-   
-    if normal_score < thresholds["Normal"]:
-        alert_message = (
-            f"⚠️ Possible system under attack detected!\n"
-            f"Normal score dropped below threshold.\n"
-            f"Score: {normal_score * 100:.3f}%\n"
-            f"From IP: {src_ip}\n"
-            f"To IP: {dst_ip}"
-        )
-        send_alert(alert_message)
+    try:
+        normal_idx = labels.tolist().index("Normal")
+        normal_score = scores[normal_idx]
+    except ValueError:
+        normal_score = 0
 
-    
     for label, score in zip(labels, scores):
-        threshold = thresholds.get(label, 0.80)
-        
-        
         if label == "Normal":
             continue
 
-        
-        if score >= threshold:
-            alert_message = (
-                f"⚠️ System under attack detected!\n"
-                f"Type: {label}\n"
-                f"Score: {score * 100:.3f}%\n"
-                f"From IP: {src_ip}\n"
-                f"To IP: {dst_ip}"
-            )
-            send_alert(alert_message)
-        
-        
-        elif 0.30 <= score < threshold:
-            alert_message = (
-                f"⚠️ Anomaly detected!\n"
-                f"Type: {label}\n"
-                f"Score: {score * 100:.3f}%\n"
-                f"From IP: {src_ip}\n"
-                f"To IP: {dst_ip}"
-            )
-            send_alert(alert_message)
+
+        if score > 0.80:
+            severity = "high"
+        elif score > normal_score:
+            severity = "medium"
+        else:
+            continue
+
+        vprint(f"{severity.capitalize()} severity detected: {label} ({score*100:.2f}%) from {src_ip} to {dst_ip}")
+        alert(label, score, src_ip, dst_ip, severity=severity)
+
+        add_to_batch(label, score, src_ip, dst_ip, severity=severity)
 
 
 
@@ -279,160 +315,103 @@ def preprocess(packet_hex, use_ip=True):
         -1,
     ] + [str(byte) for byte in payload_bytes]
 
-    final_data = " ".join(str(s) for s in final_data)
-    return final_data
+    return " ".join(str(s) for s in final_data)
 
 def predict(models, packet_hex):
     final_format = preprocess(packet_hex, use_ip=True)
-    
     tokenizer = models["tokenizer"]
     model_inputs = tokenizer(final_format[:1024], return_tensors="np")
-    
     input_ids = model_inputs.input_ids
     attention_mask = model_inputs.attention_mask
-    
     if input_ids is None or attention_mask is None:
         print("Error: Tokenization failed.")
         return [], []
-    
     net = models["net"]
     output = net.run(None, {"input_ids": input_ids, "attention_mask": attention_mask})
-    
     if output is None or len(output) == 0:
         print("Error: Model returned no output.")
         return [], []
-    
     logits = output[0]
     if logits is None:
         print("Error: Logits is None.")
         return [], []
-    
     scores = softmax(logits[0])
     if scores.size == 0:
         print("Error: Scores array is empty.")
         return [], []
-    
     idx = np.argsort(-scores)
     labels = np.array(LABELS)[idx]
     scores = scores[idx]
-
     return labels, scores
-
-# ===========================
-# Display for terminal clear
-# ===========================
-
-def display_terminal_clear():
-    print(rf'''
-{Fore.CYAN}{Style.BRIGHT}  
-            _   _      _   _    _                _    
-           | \ | |    | | | |  | |              | |   
-           |  \| | ___| |_| |__| | __ ___      _| | __
-           | . ` |/ _ \ __|  __  |/ _` \ \ /\ / / |/ / 
-           | |\  |  __/ |_| |  | | (_| |\ V  V /|   <  
-           |_| \_|\___|\__|_|  |_|\__,_| \_/\_/ |_|\_\
-{Style.RESET_ALL}
-        {Fore.GREEN}Author: ThemeHackers
-        {Fore.GREEN}Github: https://github.com/ThemeHackers/NetHawk.git
-        {Fore.GREEN}NetHawk is your network security analysis tool with many features and alerts when network attacks occur with score report and attack path shown as IP.    
-{Style.RESET_ALL}
-''')
-
-# ======================
-# Real time detection
-# ======================
 
 def real_time_detection(models):
     def packet_callback(packet):
-        
         if IP in packet and TCP in packet:
             packet_bytes = bytes(packet)
             packet_hex = packet_bytes.hex()
-
             if not packet_bytes:
-                logger.warning("Received an empty packet. Skipping...")
+                if VERBOSE: print(Fore.YELLOW + "[VERBOSE] Empty packet received. Skipping...")
                 return
-            logger.info(Fore.RED + f"Processing packet: {packet_hex[:125]}...")
-
+            
             src_ip = packet["IP"].src
             dst_ip = packet["IP"].dst
+            vprint(f"Captured packet from {src_ip} to {dst_ip}, length: {len(packet_bytes)} bytes")
 
             labels, scores = predict(models, packet_hex)
             if labels is None or scores is None or len(labels) != len(scores):
-                logger.error("Invalid model output.")
+                if VERBOSE: print("[VERBOSE] Invalid model output.")
                 return [], []
 
             analyze_and_notify(labels, scores, src_ip, dst_ip)
-    
-            os.system("clear")
-            display_terminal_clear()
-            top_k = 24
 
-            for label, score in list(zip(labels, scores))[:top_k]:
-                print(f"{label} : {score*100:.3f}%")
+            top_k = 21
+            if VERBOSE:
+                vprint("Top predictions for this packet:")
+                for label, score in list(zip(labels, scores))[:top_k]:
+                    vprint(f"  {label} : {score*100:.3f}") 
+                vprint("-" * 100)
     
-            print("-" * 150)        
-
     ifaces = args.iface
     filter = args.filter
     store = args.store
-    logger.info("Starting real-time packet capture...")
-
-    while True:
-        try:
-            sniff(prn=packet_callback, filter=filter, store=store, iface=ifaces)
-        except Exception as e:
-            logger.error(f"Error occurred while sniffing packets: {repr(e)}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            logger.info("Network error detected. Retrying in 10 seconds...")
-            time.sleep(10) 
-
-# ======================
-# Main function
-# ======================
+    if VERBOSE: vprint(f"Starting real-time packet capture on interface: {ifaces}, filter: {filter}, store: {store}")
+    try:
+        sniff(prn=packet_callback, filter=filter, store=store, iface=ifaces)
+    except Exception as e:
+        if VERBOSE: print(f"[INF] Error during packet sniffing: {e}")
 
 def main():
     check_and_download_models(WEIGHT_PATH, MODEL_PATH, REMOTE_PATH)
-    
+
     env_id = args.env_id
     rtd = args.rtd
 
     if not args.onnx:
         net = ailia.Net(MODEL_PATH, WEIGHT_PATH, env_id=env_id)
     elif rtd:
-       
         if args.onnx:
-           
+            import onnxruntime
             net = onnxruntime.InferenceSession(WEIGHT_PATH)
-
         tokenizer = AutoTokenizer.from_pretrained("tokenizer")
-
-        models = {
-            "tokenizer": tokenizer,
-            "net": net,
-        }
-
+        models = {"tokenizer": tokenizer, "net": net}
         real_time_detection(models)
         return
-
     else:
-     
+        import onnxruntime
         net = onnxruntime.InferenceSession(WEIGHT_PATH)
 
     tokenizer = AutoTokenizer.from_pretrained("tokenizer")
-
-    models = {
-        "tokenizer": tokenizer,
-        "net": net,
-    }
+    models = {"tokenizer": tokenizer, "net": net}
 
     if args.hex:  
         recognize_from_packet(models)
     else:
-        logger.info("Starting standard packet recognition...")
-        
+        vprint("Starting standard packet recognition...")
         recognize_from_packet(models)
 
-
 if __name__ == "__main__":
-    main()
+    threading.Thread(target=batch_scheduler, daemon=True).start()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('User interruption')
