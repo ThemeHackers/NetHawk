@@ -10,7 +10,12 @@ from colorama import Fore , Style , init
 import tqdm
 
 
+import torch
+
 def logo():
+    device_type = "NVIDIA CUDA (GPU)" if torch.cuda.is_available() else "Standard CPU"
+    device_color = Fore.CYAN if torch.cuda.is_available() else Fore.YELLOW
+    
     print(rf'''
 {Fore.CYAN}{Style.BRIGHT}  
             _   _      _   _    _                _    
@@ -22,8 +27,11 @@ def logo():
 {Style.RESET_ALL}
         {Fore.GREEN}Author: ThemeHackers
         {Fore.GREEN}Github: https://github.com/ThemeHackers/NetHawk.git
-        {Fore.GREEN}NetHawk is your network security analysis tool with many features and alerts when network attacks occur with score report and attack path shown as IP.    
-{Style.RESET_ALL}
+        {Fore.GREEN}AI-Driven Network Security & Intrusion Detection System.
+        {Fore.GREEN}Real-time packet analysis, threat scoring, and automated
+        {Fore.GREEN}alerting for advanced network defense.
+
+        {Fore.WHITE}Hardware Detected: {device_color}{device_type}{Style.RESET_ALL}
 ''')
     
 

@@ -1,198 +1,101 @@
-# NetHawk - Network Security Analysis Tool 
+# 🦅 NetHawk - AI-Driven Network Security & Intrusion Detection System
 
-# What do you work on?
+![NetHawk Dashboard Mockup](https://raw.githubusercontent.com/ThemeHackers/NetHawk/main/assets/banner.png)
 
-- Ubuntu
-- Kali Linux
-- ParrotOS
+NetHawk is a state-of-the-art **AI-IPS (Intrusion Prevention System)** designed for real-time network traffic analysis, threat scoring, and automated defense. Built with a dual-engine architecture, it combines deep packet inspection (DPI) with an **AnomalyGuard** self-learning model to detect both known vulnerabilities and zero-day threats.
 
+---
 
-## Description
+## 🌟 Key Features
 
-NetHawk is a powerful network security analysis tool designed to detect and analyze various network threats, including DoS attacks, DDoS attacks, port scans, SQL injections, backdoor attempts, and more. The tool leverages machine learning models to analyze network traffic in real-time, identify anomalies, and send alerts if suspicious behavior is detected. It supports a variety of attacks and can be configured to suit different network environments. The tool uses packet capture techniques and can process both pre-captured packet data and real-time network traffic.
+- **🛡️ Multi-Vector Threat Analysis**: Real-time detection of DoS, DDoS, Port Scans, SQL Injections, Botnets, and more across 24+ attack categories.
+- **🧠 AnomalyGuard (Zero-Day Detector)**: A specialized neural network that learns your network's normal behavior and flags unknown anomalies that traditional signatures might miss.
+- **🤖 AI Security Advisor**: Integrated with **TinyLlama-1.1B**, providing human-readable incident analysis and mitigation strategies directly on your dashboard.
+- **🌐 Dual-Stack Support**: Full support for both **IPv4** and **IPv6** traffic analysis.
+- **💻 Dynamic Web Dashboard**: A premium, glassmorphism-style web interface (React-inspired) for remote monitoring and deep threat investigation.
+- **📊 Terminal TUI**: A beautiful, real-time Terminal User Interface powered by `Rich`, perfect for headless server monitoring.
+- **⚡ Hardware Acceleration**: Automatically detects and utilizes **NVIDIA CUDA** for ultra-fast AI inference.
+- **🔑 Persistent Configuration**: Seamlessly manages API tokens (HuggingFace) and system settings via `config.ini`.
 
-## Features
+---
 
-- **Real-Time Packet Detection**: Captures and processes network packets in real-time, analyzing traffic for potential threats and generating alerts.
-- **AI-based Threat Detection**: Utilizes pre-trained machine learning models to classify and score various types of network threats.
-- **Packet Analysis**: The tool decodes packet data and uses the IP and TCP layers to identify attack types.
-- **Customizable Alerting**: Configurable thresholds to send notifications via LINE or email if certain attack thresholds are exceeded.
-- **Configurable Network Interface**: Users can specify the network interface (e.g., `wlan0`, `eth0`) for packet sniffing.
-- **Support for Pre-Captured Packet Data**: Allows processing of network packet data provided as hex dumps.
-- **Model Inference via ONNX Runtime**: Supports ONNX-based model inference for flexible deployment.
+## 🚀 Getting Started
 
-## config.ini
+### Prerequisites
+- Windows 10/11 or Linux
+- **Npcap** (Windows) or **Libpcap** (Linux)
+- Python 3.10+
+- (Optional) NVIDIA GPU with CUDA for better performance
 
-The `config.ini` file is used to store necessary configuration settings. Below is the format for the configuration file:
+### Installation
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/ThemeHackers/NetHawk.git
+   cd NetHawk
+   ```
 
-```ini
-[Notifications]
-BOT_TOKEN = 
-CHANNEL_ID = 
-ALERT_COOLDOWN = 60
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-[Model]
-WEIGHT_PATH = model.onnx
-MODEL_PATH = model.onnx.prototxt
-REMOTE_PATH = https://storage.googleapis.com/ailia-models/bert-network-packet-flow-header-payload/
-```
-## Labels
-The system classifies threats into the following categories:
+3. **Initialize Configuration:**
+   Create or edit `config.ini` in the root directory:
+   ```ini
+   [Notifications]
+   BOT_TOKEN = YOUR_DISCORD_BOT_TOKEN
+   CHANNEL_ID = YOUR_DISCORD_CHANNEL_ID
+   ALERT_COOLDOWN = 60
 
-1. **Analysis**
-2. **Backdoor**
-3. **Bot**
-4. **DDoS**
-5. **DoS**
-6. **DoS GoldenEye**
-7. **DoS Hulk**
-8. **DoS SlowHTTPTest**
-9. **DoS Slowloris**
-10. **Exploits**
-11. **FTP Patator**
-12. **Fuzzers**
-13. **Generic**
-14. **Heartbleed**
-15. **Infiltration**
-16. **Normal**
-17. **Port Scan**
-18. **Reconnaissance**
-19. **SSH Patator**
-20. **Shellcode**
-21. **Web Attack - Brute Force**
-22. **Web Attack - SQL Injection**
-23. **Web Attack - XSS**
-24. **Worms**
-## Install requirements.txt
-  ```bash
-  sudo su
-  python3 -m venv .venv
-  source .venv/bin/activate
-  pip3 install -r requirements.txt
-  ```
-## Usage
+   [Model]
+   WEIGHT_PATH = model.onnx
+   MODEL_PATH = model.onnx.prototxt
+   HF_TOKEN = YOUR_HUGGINGFACE_TOKEN (Optional)
 
-### Example Command-Line Arguments
+   [Performance]
+   BATCH_SIZE = 32
+   THROTTLE_DELAY = 0.05
+   ```
 
-| Argument                     | Description                                           |
-|------------------------------|-------------------------------------------------------|
-| `--hex`                      | Input HEX data for offline packet analysis.          |
-| `--iface`                    | Network interface for real-time detection (e.g., eth0, wlan0). |
-| `--filter`                   | Berkeley Packet Filter (BPF) string to filter packets. |
-| `--store`                    | Store captured packets in memory (default: 0).       |
-| `--rtd`                      | Enable real-time detection.                          |
-| `--ip`                       | Use IP layer as payload (default: True).             |
-| `--onnx`                     | Use ONNX runtime for inference.                      |
-| `--disable_ailia_tokenizer`  | Disable Ailia tokenizer.                             |
-| `--verbose`                  | Show detailed analysis and system processing information.      |
-### Examples
+---
 
-#### Real-Time Detection
-- No Verbose
+## 🛠️ Usage
+
+### Run NetHawk
+Run the main script with Administrator/Root privileges:
 ```bash
-sudo python3 nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx
-```
-- Verbose
-```bash
-sudo python3 nethawk.py --rtd --iface eth0 --filter "tcp" --ip --onnx --verbose
-```
-#### HEX Packet Analysis
-```bash
-sudo python3 nethawk.py --hex <packet_hex_data> --onnx
-```
-## Run services on Linux
-- Access the /etc/systemd/system directory file
-  ```bash
-  cd /etc/systemd/system
-  ```
-- Access root privileges
-  ```bash
-  sudo su
-  ```
-- Create nethawk.service file and edit file
-  ```bash
-  mkdir nethawk.service
-  ```
-  ```bash
-  [Unit]
-  Description=NetHawk - Service is Artificial intelligence systems that detect network threats
-  After=network.target
+# Auto-detect best interface and start sniffing
+python nethawk.py
 
-  [Service]
-  Type=simple
-  Environment="$OPTIONS=OPTIONS"
-  ExecStart=/home/user/NetHawk/.venv/bin/python3 /home/user/NetHawk/nethawk.py $OPTIONS
-  WorkingDirectory=/home/user/NetHawk
-  User=root
-  Group=root
-  Restart=always
-  RestartSec=3
+# Specify interface and BPF filter
+python nethawk.py --iface "Ethernet" --filter "tcp port 80" --verbose
+```
 
-  [Install]
-  WantedBy=multi-user.target
-  ```
-- reload the systemd daemon's configuration
-  ```bash
-  systemctl daemon-reload
-  ```
-- Set-Environment OPTIONS , Run service , checking service
-  ```bash
-  systemctl set-environment OPTIONS="--rtd --iface wlan0 --filter ip --env_id 1 --ip --onnx"
-  ```
-  
-  ```bash
-  systemctl start nethawk.service
-  ```
-  ```bash
-  systemctl status nethawk.service
-  ```
-- Your options can be viewed by running
-  ```bash
-  python3 nethawk.py -h
-  ```
-  ```bash
-  usage: nethawk.py [-h] [-i [IMAGE/VIDEO ...]] [-v VIDEO] [-s SAVE_PATH] [-b] [-e ENV_ID] [--env_list] [--ftype FILE_TYPE] [--debug] [--profile] [-bc BENCHMARK_COUNT] [--hex HEX] [--iface IFACE]
-                    [--filter FILTER] [--store STORE] [--disable_ailia_tokenizer] [--rtd] [--ip] [--onnx] [--verbose]
-  
-  bert-network-packet-flow-header-payload
-  
-  options:
-    -h, --help            show this help message and exit
-    -i, --input [IMAGE/VIDEO ...]
-                          The default (model-dependent) input data (image / video) path. If a directory name is specified, the model will be run for the files inside. File type is specified by --ftype
-                          argument (default: input_hex.txt)
-    -v, --video VIDEO     You can convert the input video by entering style image.If the int variable is given, corresponding webcam input will be used. (default: None)
-    -s, --savepath SAVE_PATH
-                          Save path for the output (image / video / text). (default: None)
-    -b, --benchmark       Running the inference on the same input 5 times to measure execution performance. (Cannot be used in video mode) (default: False)
-    -e, --env_id ENV_ID   A specific environment id can be specified. By default, the return value of ailia.get_gpu_environment_id will be used (default: -1)
-    --env_list            display environment list (default: False)
-    --ftype FILE_TYPE     file type list: image | video | audio (default: image)
-    --debug               set default logger level to DEBUG (enable to show DEBUG logs) (default: False)
-    --profile             set profile mode (enable to show PROFILE logs) (default: False)
-    -bc, --benchmark_count BENCHMARK_COUNT
-                          set iteration count of benchmark (default: 5)
-    --hex HEX             Input-HEX data. (default: None)
-    --iface IFACE         Network Interface eg; wlan0 eth0 enp0s3 (default: None)
-    --filter FILTER       Adjust the scope of packet capture (default: None)
-    --store STORE         Captured packets are stored in memory (as a list) and returned when the sniffing session is complete. (default: 0)
-    --disable_ailia_tokenizer
-                          disable ailia tokenizer. (default: False)
-    --rtd                 Real-time packet detection and network threat analysis using AI (default: False)
-    --ip                  Use IP layer as payload. (default: False)
-    --onnx                execute onnxruntime version. (default: False)
-    --verbose             Show detailed analysis and system processing information. (default: False)
-                                                                 
-  ```
-## More
-- real-time log monitoring of systemd
-  ```bash
-  sudo journalctl -f
-  ```
-- Filter by importance level
-  ```bash
-  sudo journalctl -f -p err
-  ```
-## Contributions
-Contributions are welcome! Feel free to fork the repository and submit a pull request with your improvements.
+### Accessing the Dashboard
+Once started, the system will launch two interfaces:
+1. **Terminal UI**: Real-time stats and packet monitor in your console.
+2. **Web Dashboard**: Open `http://127.0.0.1:8000` in your browser for the full visual experience.
 
+---
+
+## 🏷️ Threat Classification Labels
+NetHawk classifies traffic into the following 24 categories:
+1. **Normal** (Clean Traffic)
+2. **DoS / DDoS** (Hulk, GoldenEye, Slowloris, etc.)
+3. **Web Attacks** (SQL Injection, XSS, Brute Force)
+4. **Network Scans** (Port Scan, Reconnaissance)
+5. **Malware Activity** (Botnets, Backdoors, Worms, Shellcode)
+6. **Exploits & Fuzzers**
+
+---
+
+## 🔒 Security & Privacy
+NetHawk is designed for security professionals and network administrators. Always ensure you have explicit permission to monitor network traffic on your chosen environment.
+
+---
+
+## 🤝 Contributions
+Contributions are welcome! Whether it's improving the AI models, adding new protocol support, or enhancing the dashboard UI, feel free to submit a Pull Request.
+
+**Author:** [ThemeHackers](https://github.com/ThemeHackers)  
+**License:** MIT License

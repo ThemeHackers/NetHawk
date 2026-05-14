@@ -1,17 +1,15 @@
-onnxruntime
-ailia
+--index-url https://download.pytorch.org/whl/cu126
+torch
+torchvision
+onnxruntime-gpu
 transformers
 scapy
 numpy
 colorama
 requests
-torch
-torchvision
 tabulate
-onnx
-matplotlib
-
-
-
-protobuf>=4.25.8 # not directly required, pinned by Snyk to avoid a vulnerability
-urllib3>=2.5.0 # not directly required, pinned by Snyk to avoid a vulnerability
+rich
+fastapi
+uvicorn
+python-multipart
+nvidia-ml-py

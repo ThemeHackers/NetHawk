@@ -169,3 +169,14 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# models 
+model.onnx
+model.onnx.prototxt
+
+# test
+scratch/
+
+# NetHawk local files
+nethawk_logs.db
+config.ini
