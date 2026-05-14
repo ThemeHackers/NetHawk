@@ -1,6 +1,6 @@
 # 🦅 NetHawk - AI-Driven Network Security & Intrusion Detection System
 
-![NetHawk Dashboard Mockup](https://raw.githubusercontent.com/ThemeHackers/NetHawk/main/assets/banner.png)
+
 
 NetHawk is a state-of-the-art **AI-IPS (Intrusion Prevention System)** designed for real-time network traffic analysis, threat scoring, and automated defense. Built with a dual-engine architecture, it combines deep packet inspection (DPI) with an **AnomalyGuard** self-learning model to detect both known vulnerabilities and zero-day threats.
 
