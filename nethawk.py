@@ -495,29 +495,32 @@ if __name__ == "__main__":
             except: pass
 
         if not iface:
-            from scapy.arch.windows import get_windows_if_list
-            win_ifs = get_windows_if_list()
-            ether_keywords = ["realtek", "gbe", "pci", "ethernet", "lan", "family controller", "gigabit"]
-            ignore_keywords = ["virtual", "hyper-v", "miniport", "loopback", "bluetooth", "wi-fi", "wireless", "wlan", "software"]
-            best_score = -999
-            for w in win_ifs:
-                desc, name = w.get('description', '').lower(), w.get('name', '').lower()
+            if sys.platform.startswith('win'):
                 try:
-                    ips = w.get('ips', [])
-                    if not ips: continue
-                    has_active_ip = False
-                    for addr in ips:
-                        if addr != "0.0.0.0" and not addr.startswith("169.254") and addr != "127.0.0.1":
-                            has_active_ip = True; break
-                    if not has_active_ip: continue
-                    score = 0
-                    if any(k in desc for k in ether_keywords): score += 30
-                    if any(k in name for k in ether_keywords): score += 15
-                    if any(k in desc for k in ignore_keywords): score -= 100
-                    if any(k in name for k in ignore_keywords): score -= 100
-                    score += len(ips) * 2
-                    if score > best_score: best_score = score; iface = w['name']
-                except: continue
+                    from scapy.arch.windows import get_windows_if_list
+                    win_ifs = get_windows_if_list()
+                    ether_keywords = ["realtek", "gbe", "pci", "ethernet", "lan", "family controller", "gigabit"]
+                    ignore_keywords = ["virtual", "hyper-v", "miniport", "loopback", "bluetooth", "wi-fi", "wireless", "wlan", "software"]
+                    best_score = -999
+                    for w in win_ifs:
+                        desc, name = w.get('description', '').lower(), w.get('name', '').lower()
+                        try:
+                            ips = w.get('ips', [])
+                            if not ips: continue
+                            has_active_ip = False
+                            for addr in ips:
+                                if addr != "0.0.0.0" and not addr.startswith("169.254") and addr != "127.0.0.1":
+                                    has_active_ip = True; break
+                            if not has_active_ip: continue
+                            score = 0
+                            if any(k in desc for k in ether_keywords): score += 30
+                            if any(k in name for k in ether_keywords): score += 15
+                            if any(k in desc for k in ignore_keywords): score -= 100
+                            if any(k in name for k in ignore_keywords): score -= 100
+                            score += len(ips) * 2
+                            if score > best_score: best_score = score; iface = w['name']
+                        except: continue
+                except: pass
             if not iface: iface = scapy_conf.iface 
 
         if not is_admin(): print(f"{Fore.RED}⚠️ WARNING: Not running as Administrator.")
