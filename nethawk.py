@@ -165,7 +165,9 @@ def get_entropy(data):
 
 def is_admin():
     try: return ctypes.windll.shell32.IsUserAnAdmin()
-    except: return False
+    except:
+        try: return os.getuid() == 0
+        except: return False
 
 def preprocess_batch(packet_hex_list):
     processed = []
@@ -524,10 +526,11 @@ if __name__ == "__main__":
             if not iface: iface = scapy_conf.iface 
 
         if not is_admin(): print(f"{Fore.RED}⚠️ WARNING: Not running as Administrator.")
-        if not scapy_conf.use_pcap:
-            print(f"{Fore.RED}❌ ERROR: Npcap/WinPcap not detected!")
-        else:
-            print(f"{Fore.GREEN}✅ Packet Capture Driver: Found")
+        if sys.platform.startswith('win'):
+            if not scapy_conf.use_pcap:
+                print(f"{Fore.RED}❌ ERROR: Npcap/WinPcap not detected!")
+            else:
+                print(f"{Fore.GREEN}✅ Packet Capture Driver: Found")
 
         try:
             current_ip = get_if_addr(iface)
@@ -616,14 +619,25 @@ if __name__ == "__main__":
                     except: pass
         threading.Thread(target=stats_updater, daemon=True).start()
 
+        sniff_error = None
         def packet_callback(p):
             if "IP" in p or "IPv6" in p: packet_queue.put(p)
+        
+        def run_sniff():
+            global sniff_error
+            try:
+                sniff(prn=packet_callback, filter="(ip or ip6) and (tcp or udp)", iface=iface, store=0)
+            except Exception as e:
+                sniff_error = str(e)
+
         print(f"{Fore.YELLOW}📡 Sniffing started on {iface}...")
-        threading.Thread(target=lambda: sniff(prn=packet_callback, filter="(ip or ip6) and (tcp or udp)", iface=iface, store=0), daemon=True).start()
+        threading.Thread(target=run_sniff, daemon=True).start()
 
         layout = create_layout()
         with Live(layout, refresh_per_second=4, screen=True) as live:
             while True:
+                if sniff_error:
+                    raise RuntimeError(f"Sniffing thread failed: {sniff_error}")
                 layout["header"].update(Header()); layout["footer"].update(Footer()); layout["left"].update(get_stats_panel()); layout["right"].split_column(Layout(get_packet_table(), ratio=3), Layout(get_alert_table(), ratio=1))
                 time.sleep(0.2)
     except KeyboardInterrupt:
