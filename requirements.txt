@@ -1,4 +1,6 @@
---index-url https://download.pytorch.org/whl/cu126
+--index-url https://download.pytorch.org/whl/cu130
+--extra-index-url https://pypi.org/simple
+
 torch
 torchvision
 onnxruntime-gpu
